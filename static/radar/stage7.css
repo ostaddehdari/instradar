@@ -1,0 +1,13 @@
+.stage7-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:18px}
+.telegram-account-card{border-top:3px solid #2aabee}
+.telegram-actions,.inline-verify{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.inline-verify input{min-width:210px;max-width:320px}
+.destination-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:16px}
+.destination{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);border-radius:14px;background:rgba(42,171,238,.06)}
+.destination>i{font-size:1.6rem;color:#2aabee}.destination div{display:grid;gap:4px}.destination small{color:var(--muted)}
+.destination-picker{grid-column:1/-1;border:1px solid var(--line);border-radius:15px;padding:12px;display:flex;gap:10px;flex-wrap:wrap}
+.destination-picker legend{float:none;width:auto;padding:0 7px;font-size:.85rem;color:var(--muted)}
+.destination-picker label{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:rgba(42,171,238,.07);cursor:pointer}
+.destination-picker label.is-hidden{display:none}.destination-picker small{color:var(--muted)}
+.full-width{grid-column:1/-1}.full-width textarea{width:100%;resize:vertical}
+@media(max-width:767.98px){.stage7-grid{grid-template-columns:1fr}.inline-verify{display:grid;width:100%}.inline-verify input{max-width:none;width:100%}.destination-picker{display:grid}.destination-picker label{width:100%}}

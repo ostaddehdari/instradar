@@ -1,0 +1,62 @@
+{% extends 'base.html' %}{% load persian %}
+{% block title %}رصد @{{ job.target }}{% endblock %}{% block crumb %}رصد / @{{ job.target }}{% endblock %}
+{% block header_actions %}
+  {% if job.status == 'running' or job.status == 'queued' %}<button class="btn btn-warning btn-sm rounded-pill" form="pause-job"><i class="fa-solid fa-pause ms-1"></i>توقف</button>
+  {% else %}<button class="btn btn-primary btn-sm rounded-pill" form="resume-job"><i class="fa-solid fa-play ms-1"></i>ادامه</button>{% endif %}
+{% endblock %}
+{% block body %}
+<div class="hero-panel mb-3">
+  <div><span class="eyebrow">OBSERVATION / {{ job.pk }}</span><h1>@{{ job.target }}</h1><p>زیرکار جاری: {{ job.current_stage_fa }} · {% if job.account_pool %}Pool {{ job.account_pool.name }} (تا {{ job.max_active_accounts }} حساب هم‌زمان){% else %}حساب @{{ job.account.username }}{% endif %}</p></div>
+  <span class="big-status status-{{ job.status }}">{{ job.get_status_display }}</span>
+</div>
+
+<section class="overall-progress-card mb-3">
+  <div><strong>پیشرفت واقعی رصد</strong><small>بر اساس مقدار استخراج‌شده / مقدار کل هر زیرکار</small></div>
+  <b>{{ job.progress_percent }}٪</b>
+  <div class="progress job-progress" role="progressbar" aria-valuenow="{{ job.progress_percent }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:{{ job.progress_percent }}%"></div></div>
+</section>
+
+<div class="observation-metrics mb-3">{% for task in subtasks %}
+  <article class="observation-metric status-border-{{ task.status }}">
+    <i class="{{ task.icon }}"></i><div><span>{{ task.label }}</span>
+    {% if task.key == 'comments' %}<strong>{{ task.comments_extracted }}/{{ task.comments_expected|default_if_none:'؟' }}</strong><small>{{ task.posts_done }}/{{ task.posts_total }} پست پردازش شده</small>
+    {% else %}<strong>{{ task.counter }}</strong><small>{{ task.status_label }}</small>{% endif %}</div>
+  </article>{% endfor %}
+</div>
+
+{% if job.account_pool %}<section class="card compact-card mb-3">
+  <div class="section-head"><div><h2><i class="fa-solid fa-layer-group text-primary ms-2"></i>توزیع Pool: {{ job.account_pool.name }}</h2><p>بودجهٔ Pool: {{ job.account_pool.requests_this_hour }}/{{ job.account_pool.hourly_request_limit }} ساعتی · {{ job.account_pool.requests_today }}/{{ job.account_pool.daily_request_limit }} روزانه · سقف این رصد {{ job.max_active_accounts }} حساب</p></div><span class="badge status-running">{{ job.comments_scheduled_count }} پست زمان‌بندی · {{ job.comments_skipped_count }} بدون تغییر</span></div>
+  <div class="table-responsive"><table class="table table-sm align-middle modern-table" data-table-tools><thead><tr><th>پست</th><th>حساب تخصیص‌یافته</th><th>صفحه</th><th>تعویض حساب</th><th>وضعیت</th></tr></thead><tbody>{% for item in comment_jobs %}<tr><td>{{ item.post.shortcode }}</td><td>@{{ item.account.username }}</td><td>{{ item.top_pages }}</td><td>{{ item.account_switches }}</td><td><span class="badge status-{{ item.status }}">{{ item.get_status_display }}</span></td></tr>{% empty %}<tr><td colspan="5" class="empty">جاب کامنتی لازم نبود یا هنوز ساخته نشده است.</td></tr>{% endfor %}</tbody></table></div>
+</section>{% endif %}
+
+{% if job.error %}<div class="alert alert-warning">{{ job.error }}</div>{% endif %}
+{% if job.relationship_issue %}<div class="alert alert-info">Provider: {{ job.relationship_provider }} · {{ job.relationship_issue }}</div>{% endif %}
+
+<section class="card compact-card mb-3">
+  <div class="section-head"><div><h2><i class="fa-solid fa-arrow-down-wide-short text-primary ms-2"></i>مدیریت زیرکارهای این رصد</h2><p>با کشیدن دستگیره، اولویت را عوض کنید. Worker پس از پایان صفحهٔ جاری، اولین زیرکار ناتمام را اجرا می‌کند.</p></div><span class="save-state" data-sort-state>ترتیب در PostgreSQL ذخیره می‌شود</span></div>
+  <div class="subtask-list" data-stage-sort-url="{% url 'radar:reorder_job_stages' job.pk %}">{% for task in subtasks %}
+    <article class="subtask-row status-{{ task.status }}" draggable="true" data-stage="{{ task.key }}">
+      <button class="subtask-handle" type="button" aria-label="جابجایی {{ task.label }}"><i class="fa-solid fa-grip-vertical"></i></button>
+      <span class="subtask-icon"><i class="{{ task.icon }}"></i></span>
+      <div class="subtask-body"><div><strong>{{ task.label }}</strong><span class="badge status-{{ task.status }}">{{ task.status_label }}</span></div>
+        {% if task.key == 'comments' %}<small>پست‌ها {{ task.posts_done }}/{{ task.posts_total }} · کامنت‌ها {{ task.comments_extracted }}/{{ task.comments_expected|default_if_none:'؟' }}</small>
+        {% else %}<small>{{ task.extracted }} استخراج‌شده از {{ task.expected|default_if_none:'مقدار نامشخص' }}</small>{% endif %}
+        {% if task.issue %}<small class="text-warning">{{ task.issue }}</small>{% endif %}
+      </div>
+      <div class="subtask-progress"><b>{{ task.percent }}٪</b><div class="progress"><div class="progress-bar" style="width:{{ task.percent }}%"></div></div></div>
+    </article>{% empty %}<p class="empty">زیرکاری برای این رصد انتخاب نشده است.</p>{% endfor %}</div>
+</section>
+
+<section class="card compact-card">
+  <div class="section-head"><div><h2>کنترل جاب</h2><p>ایجاد: {{ job.created_at|jalali_datetime }}{% if job.completed_at %} · پایان: {{ job.completed_at|jalali_datetime }}{% endif %}</p></div></div>
+  <div class="d-flex flex-wrap gap-2">
+    <form id="pause-job" method="post" action="{% url 'radar:pause_observation' job.pk %}">{% csrf_token %}<button class="btn btn-warning"><i class="fa-solid fa-pause ms-1"></i>توقف امن</button></form>
+    <form id="resume-job" method="post" action="{% url 'radar:resume_observation' job.pk %}">{% csrf_token %}<button class="btn btn-primary"><i class="fa-solid fa-rotate ms-1"></i>ادامه از Cursor</button></form>
+    <form method="post" action="{% url 'radar:archive_observation' job.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary"><i class="fa-solid fa-box-archive ms-1"></i>بایگانی</button></form>
+    <form method="post" action="{% url 'radar:delete_observation' job.pk %}" data-confirm="جاب و زیرجاب‌های اجرایی حذف شوند؟">{% csrf_token %}<button class="btn btn-outline-danger"><i class="fa-regular fa-trash-can ms-1"></i>حذف جاب</button></form>
+    {% if request.user.is_superuser %}<form method="post" action="{% url 'radar:capture_job_log' 'observation' job.pk %}" class="inline-log">{% csrf_token %}<input class="form-control" type="number" name="window_seconds" value="60" min="10" max="300" aria-label="بازه لاگ به ثانیه"><button class="btn btn-outline-dark"><i class="fa-solid fa-file-waveform ms-1"></i>ذخیره لاگ</button></form>{% endif %}
+  </div>
+</section>
+
+{% include 'radar/_job_activity.html' %}
+{% endblock %}

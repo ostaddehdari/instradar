@@ -1,0 +1,58 @@
+============================================================
+INSTRADAR - WINDOWS INSTALLATION
+============================================================
+
+1. Extract this ZIP to a normal folder, for example:
+
+   C:\AI\instradar
+   or
+   C:\instradar
+
+2. Double-click:
+
+   install_windows.bat
+
+The installer will:
+
+- Detect/install Python 3.12 when winget is available
+- Create .venv
+- Upgrade pip / setuptools / wheel
+- Install Python requirements
+- Detect package.json and install Node.js dependencies when needed
+- Check/install Google Chrome
+- Install Playwright Chromium when Playwright is present
+- Run pip check
+
+------------------------------------------------------------
+Django commands
+------------------------------------------------------------
+
+Example:
+
+django_windows.bat check
+
+django_windows.bat migrate
+
+django_windows.bat collectstatic --noinput
+
+django_windows.bat runserver 0.0.0.0:8000
+
+------------------------------------------------------------
+IMPORTANT
+------------------------------------------------------------
+
+Production secrets are intentionally excluded:
+
+.env
+app.env
+private keys
+certificates
+
+Copy your safe configuration from .env.example and create a new .env.
+
+External infrastructure such as PostgreSQL and Redis is not bundled
+inside the application ZIP because these are services, not Python
+packages. Configure them separately when the project requires them.
+
+Chrome cache directories are excluded, while non-cache browser profile
+data is not intentionally deleted by the packager.

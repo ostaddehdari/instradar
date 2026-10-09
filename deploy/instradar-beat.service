@@ -1,0 +1,20 @@
+[Unit]
+Description=InstaRadar Celery scheduler
+After=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=instradar
+Group=instradar
+WorkingDirectory=/opt/instradar-py/current
+EnvironmentFile=/opt/instradar-py/shared/app.env
+ExecStart=/opt/instradar-py/venv/bin/celery -A config beat --loglevel=INFO --schedule=/opt/instradar-py/shared/celerybeat-schedule
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+PrivateTmp=yes
+ReadWritePaths=/opt/instradar-py/shared
+
+[Install]
+WantedBy=multi-user.target

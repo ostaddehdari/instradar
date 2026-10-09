@@ -1,0 +1,5 @@
+{% load persian %}{% if page.has_other_pages %}<nav class="pagination" aria-label="صفحه‌بندی">
+  {% if page.has_previous %}<a class="button ghost" href="?{% urlparams page=page.previous_page_number %}"><i class="fa-solid fa-chevron-right"></i> قبلی</a>{% endif %}
+  <span>صفحهٔ {{ page.number }} از {{ page.paginator.num_pages }} · {{ page.paginator.count }} نتیجه</span>
+  {% if page.has_next %}<a class="button ghost" href="?{% urlparams page=page.next_page_number %}">بعدی <i class="fa-solid fa-chevron-left"></i></a>{% endif %}
+</nav>{% endif %}

@@ -1,0 +1,24 @@
+[Unit]
+Description=InstaRadar Python Playwright browser on existing noVNC display
+After=network.target instaradar-display.service postgresql.service
+Wants=instaradar-display.service
+
+[Service]
+Type=simple
+User=instradar
+Group=instradar
+WorkingDirectory=/opt/instradar-py/current
+EnvironmentFile=/opt/instradar-py/shared/app.env
+Environment=DISPLAY=:99
+Environment=HOME=/opt/instradar-py/shared/browser-home
+Environment=XDG_CONFIG_HOME=/opt/instradar-py/shared/browser-home/.config
+Environment=XDG_CACHE_HOME=/opt/instradar-py/shared/browser-home/.cache
+Environment=XDG_DATA_HOME=/opt/instradar-py/shared/browser-home/.local/share
+ExecStart=/opt/instradar-py/venv/bin/python manage.py browserd
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ReadWritePaths=/opt/instradar-py/shared
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}{% load persian %}
+{% block title %}نسبت مخاطبین · InstaRadar{% endblock %}{% block crumb %}مخاطبان / نسبت با پیج مبدأ{% endblock %}
+{% block body %}
+<div class="compact-intro"><div><span class="eyebrow">AUDIENCE RELATIONS</span><h1>نسبت مخاطبین با پیج مبدأ</h1><p>فالور یعنی «مخاطب، پیج مبدأ را دنبال می‌کند»؛ فالوینگ یعنی «پیج مبدأ، مخاطب را دنبال می‌کند».</p></div><a class="btn btn-success rounded-pill" href="{% url 'radar:export_audience_relations_xlsx' %}?{{ request.GET.urlencode }}"><i class="fa-solid fa-file-excel ms-1"></i>Excel همه نسبت‌ها</a></div>
+
+<section class="card compact-card mb-3"><form method="get" class="row g-2 align-items-end">
+  <div class="col-xl-3 col-lg-6"><label class="form-label">جستجوی پیج یا مخاطب</label><input class="form-control" name="q" value="{{ query }}" placeholder="username"></div>
+  <div class="col-xl-3 col-lg-6"><label class="form-label">یک یا چند پیج مبدأ</label><select class="form-select multi-filter" name="sources" multiple size="3">{% for source in sources %}<option value="{{ source.pk }}" {% if source.pk in selected_sources %}selected{% endif %}>@{{ source.current_username }}</option>{% endfor %}</select></div>
+  <div class="col-xl-2 col-md-4"><label class="form-label">نوع نسبت</label><select class="form-select" name="direction"><option value="all" {% if relation_direction == 'all' %}selected{% endif %}>فالور و فالوینگ</option><option value="follower" {% if relation_direction == 'follower' %}selected{% endif %}>فقط فالورها</option><option value="following" {% if relation_direction == 'following' %}selected{% endif %}>فقط فالوینگ‌ها</option></select></div>
+  <div class="col-xl-2 col-md-4"><label class="form-label">وضعیت</label><select class="form-select" name="status"><option value="active" {% if status == 'active' %}selected{% endif %}>فعال</option><option value="ended" {% if status == 'ended' %}selected{% endif %}>پایان‌یافته</option><option value="all" {% if status == 'all' %}selected{% endif %}>همه</option></select></div>
+  <div class="col-xl-1 col-md-2"><label class="form-label">تعداد</label><select class="form-select" name="page_size"><option value="20" {% if page_size == 20 %}selected{% endif %}>۲۰</option><option value="40" {% if page_size == 40 %}selected{% endif %}>۴۰</option><option value="80" {% if page_size == 80 %}selected{% endif %}>۸۰</option><option value="120" {% if page_size == 120 %}selected{% endif %}>۱۲۰</option></select></div>
+  <div class="col-xl-1 col-md-2"><button class="btn btn-primary w-100"><i class="fa-solid fa-filter"></i></button></div>
+</form></section>
+
+<section class="card compact-card"><div class="table-responsive"><table class="table align-middle modern-table" data-server-table><thead><tr>
+  <th><a href="?{% sort_query 'source' %}">پیج مبدأ <i class="fa-solid fa-sort"></i></a></th><th><a href="?{% sort_query 'audience' %}">مخاطب <i class="fa-solid fa-sort"></i></a></th><th><a href="?{% sort_query 'kind' %}">نسبت <i class="fa-solid fa-sort"></i></a></th><th>معنای رابطه</th><th>وضعیت</th><th><a href="?{% sort_query 'first_seen' %}">اولین مشاهده <i class="fa-solid fa-sort"></i></a></th><th><a href="?{% sort_query 'last_seen' %}">آخرین مشاهده <i class="fa-solid fa-sort"></i></a></th>
+</tr></thead><tbody>{% for row in page %}<tr>
+  <td><a href="{% url 'radar:instagram_profile' row.job.seed_identity.current_username %}">@{{ row.job.seed_identity.current_username }}</a></td>
+  <td><div class="relation-person">{% if row.audience_identity.profile_pic_url %}<img src="{{ row.audience_identity.profile_pic_url }}" loading="lazy" alt="@{{ row.audience_identity.current_username }}">{% endif %}<a href="{% url 'radar:instagram_profile' row.audience_identity.current_username %}">@{{ row.audience_identity.current_username }}</a></div></td>
+  <td><span class="badge relation-{{ row.audience_kind }}">{{ row.audience_kind_fa }}</span></td>
+  <td>{% if row.audience_kind == 'follower' %}مخاطب ← پیج مبدأ{% else %}پیج مبدأ ← مخاطب{% endif %}</td>
+  <td>{% if row.relationship.is_active %}<span class="badge status-active">فعال</span>{% else %}<span class="badge status-unfollowed">پایان‌یافته</span>{% endif %}</td>
+  <td>{{ row.relationship.first_seen_at|jalali_datetime }}</td><td>{{ row.relationship.last_seen_at|jalali_datetime }}</td>
+</tr>{% empty %}<tr><td colspan="7" class="empty">نسبتی مطابق فیلتر پیدا نشد.</td></tr>{% endfor %}</tbody></table></div>{% include 'radar/pagination.html' %}</section>
+{% endblock %}

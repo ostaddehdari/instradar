@@ -1,0 +1,22 @@
+[Unit]
+Description=InstaRadar Telethon publication worker
+After=postgresql.service redis-server.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=instradar
+Group=instradar
+WorkingDirectory=/opt/instradar-py/current
+EnvironmentFile=/opt/instradar-py/shared/app.env
+ExecStart=/opt/instradar-py/venv/bin/celery -A config worker --loglevel=INFO --queues=telegram --concurrency=1 --hostname=telegram@%%h
+Restart=always
+RestartSec=5
+TimeoutStopSec=1000
+NoNewPrivileges=true
+ProtectSystem=strict
+PrivateTmp=yes
+ReadWritePaths=/opt/instradar-py/shared
+
+[Install]
+WantedBy=multi-user.target

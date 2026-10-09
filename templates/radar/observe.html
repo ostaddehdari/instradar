@@ -1,0 +1,60 @@
+{% extends 'base.html' %}{% load persian %}
+{% block title %}رصد جامع · InstaRadar{% endblock %}{% block crumb %}عملیات / رصد جامع{% endblock %}
+{% block header_actions %}
+<div class="d-flex gap-2">
+  <button class="btn btn-primary btn-sm rounded-pill px-3" type="button" data-bs-toggle="collapse" data-bs-target="#new-observation-panel" aria-expanded="false"><i class="fa-solid fa-satellite-dish ms-1"></i>رصد جدید</button>
+  <button class="btn btn-outline-primary btn-sm rounded-pill px-3" type="button" data-bs-toggle="collapse" data-bs-target="#new-transfer-panel" aria-expanded="false"><i class="fa-brands fa-telegram ms-1"></i>انتقال جدید</button>
+</div>
+{% endblock %}
+{% block body %}
+<div class="hero-panel mb-3"><div><span class="eyebrow">UNIFIED OBSERVATION / 3.13.0</span><h1>مرکز رصد اینستاگرام</h1><p>پست، ریلز، فالور، فالوینگ و کامنت با Cursor پایدار و Pool ایمن حساب‌ها.</p></div><div class="priority-flow"><span><b><i class="fa-solid fa-layer-group"></i></b>Account Pool</span><span><b><i class="fa-solid fa-shield-halved"></i></b>Budget + Cooldown</span></div></div>
+
+<section id="new-observation-panel" class="collapse card glass-card mb-3">
+  <div class="section-head"><div><h2><i class="fa-solid fa-satellite-dish text-primary ms-2"></i>رصد تازه</h2><p>فرم پس از ثبت بسته می‌شود و جزئیات از صفحهٔ جاب قابل مدیریت است.</p></div><button class="btn-close" type="button" data-bs-toggle="collapse" data-bs-target="#new-observation-panel" aria-label="بستن"></button></div>
+  <form id="observation-form" method="post" action="{% url 'radar:create_media_job' %}" class="row g-3">{% csrf_token %}<input type="hidden" name="options_present" value="1">
+    <div class="col-lg-4"><label class="form-label">حساب اصلی / جایگزین تکی</label><select class="form-select" name="account_id" required>{% for account in accounts %}<option value="{{ account.pk }}">@{{ account.username }} · {{ account.health_fa }}</option>{% empty %}<option value="">ابتدا حساب اضافه کنید</option>{% endfor %}</select></div>
+    <div class="col-lg-4"><label class="form-label">Pool حساب‌ها (اختیاری)</label><select class="form-select" name="account_pool_id"><option value="">بدون Pool؛ فقط حساب بالا</option>{% for pool in account_pools %}<option value="{{ pool.pk }}">{{ pool.name }} · {{ pool.members.all|length }} عضو · هم‌زمانی {{ pool.max_concurrency }}</option>{% endfor %}</select><small class="text-muted">برای کامنت‌ها، هر پست به یک عضو سالم سپرده می‌شود.</small></div>
+    <div class="col-lg-2"><label class="form-label">حساب هم‌زمان</label><input class="form-control" name="max_active_accounts" type="number" value="1" min="1" max="{{ pool_concurrency_cap }}"><small class="text-muted">بدون Pool برابر ۱</small></div>
+    <div class="col-lg-4"><label class="form-label">پیج هدف</label><div class="input-group"><span class="input-group-text">@</span><input class="form-control" name="target" dir="ltr" required maxlength="100" autocomplete="off"></div></div>
+    <div class="col-lg-2"><label class="form-label">نوع رصد</label><select class="form-select" name="mode"><option value="full">کامل</option><option value="incremental">افزایشی</option></select></div>
+    <div class="col-lg-2"><label class="form-label">اولویت جاب</label><select class="form-select" name="priority">{% for value in '987654321' %}<option value="{{ value }}" {% if value == '5' %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
+    <div class="col-12"><div class="choice-grid">
+      <label class="choice-card"><input type="checkbox" name="include_posts" checked><i class="fa-regular fa-images"></i><b>پست‌ها</b><small>Timeline و جزئیات</small></label>
+      <label class="choice-card"><input type="checkbox" name="include_reels" checked><i class="fa-solid fa-film"></i><b>ریلزها</b><small>View و Play</small></label>
+      <label class="choice-card"><input type="checkbox" name="include_followers"><i class="fa-solid fa-users"></i><b>فالورها</b><small>مخاطب ← پیج</small></label>
+      <label class="choice-card"><input type="checkbox" name="include_following"><i class="fa-solid fa-user-plus"></i><b>فالوینگ‌ها</b><small>پیج ← مخاطب</small></label>
+      <label class="choice-card"><input type="checkbox" name="include_comments"><i class="fa-regular fa-comments"></i><b>کامنت‌ها</b><small>مستقل؛ از پست‌های آرشیوشده</small></label>
+      <label class="choice-card"><input type="checkbox" name="include_likes" checked><i class="fa-regular fa-heart"></i><b>لایک‌کنندگان</b><small>موارد قابل دسترس</small></label>
+    </div></div>
+    <div class="col-md-4"><label class="form-label">از تاریخ شمسی</label><input class="form-control jalali-picker" name="date_from" data-jdp placeholder="۱۴۰۵/۰۱/۰۱" autocomplete="off"></div>
+    <div class="col-md-4"><label class="form-label">تا تاریخ شمسی</label><input class="form-control jalali-picker" name="date_to" data-jdp placeholder="اختیاری" autocomplete="off"></div>
+    <div class="col-md-4"><label class="form-label">سقف صفحه</label><input class="form-control" name="max_pages" type="number" min="0" max="10000" placeholder="۰ یعنی بدون سقف"></div>
+    <div class="col-12"><div class="telegram-panel"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="publish_to_telegram" id="publish-toggle"><label class="form-check-label fw-bold" for="publish-toggle">انتقال خودکار همین رصد به تلگرام</label></div><div class="telegram-fields is-hidden mt-3">{% include 'radar/_telegram_destination_picker.html' %}<label class="form-label mt-3">قالب کپشن</label><textarea class="form-control" name="caption_template" rows="2" placeholder="{caption}&#10;{hashtags}&#10;{url}"></textarea></div></div></div>
+    <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary btn-lg rounded-pill px-5" {% if not accounts %}disabled{% endif %}><i class="fa-solid fa-play ms-2"></i>ساخت جاب جامع</button></div>
+  </form>
+</section>
+
+<section id="new-transfer-panel" class="collapse card glass-card mb-3">
+  <div class="section-head"><div><h2><i class="fa-brands fa-telegram text-primary ms-2"></i>ساخت جاب انتقال از آرشیو</h2><p>محتوای پیج رصدشده از قدیمی به جدید منتقل می‌شود.</p></div><button class="btn-close" type="button" data-bs-toggle="collapse" data-bs-target="#new-transfer-panel" aria-label="بستن"></button></div>
+  <form method="post" action="{% url 'radar:create_transfer_job' %}" class="row g-3">{% csrf_token %}
+    <div class="col-lg-3"><label class="form-label">حساب Instagram</label><select class="form-select" name="instagram_account_id" required>{% for account in accounts %}<option value="{{ account.pk }}">@{{ account.username }}</option>{% endfor %}</select></div>
+    <div class="col-lg-3"><label class="form-label">پیج آرشیوشده</label><select class="form-select" name="target" required>{% for target in transfer_targets %}<option value="{{ target }}">@{{ target }}</option>{% endfor %}</select></div>
+    <div class="col-lg-6">{% include 'radar/_telegram_destination_picker.html' %}</div>
+    <div class="col-12"><label class="form-label">قالب کپشن</label><textarea class="form-control" name="caption_template" rows="2" placeholder="{caption}&#10;{hashtags}&#10;{url}"></textarea></div>
+    <div class="col-12 d-flex align-items-center justify-content-between"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="force_resend" value="1" id="transfer-force-resend"><label class="form-check-label" for="transfer-force-resend">انتقال دوباره تکراری‌ها</label></div><button class="btn btn-primary rounded-pill px-4">ساخت جاب انتقال</button></div>
+  </form>
+</section>
+
+<section class="card glass-card">
+  <div class="section-head"><div><h2>رصدهای اخیر</h2><p>هدف، پیشرفت واقعی و وضعیت آخرین رصدها.</p></div><div class="d-flex gap-2"><a class="btn btn-primary rounded-pill" href="{% url 'radar:jobs' %}">مدیریت همه جاب‌ها</a><a class="btn btn-outline-secondary rounded-pill" href="?{% if show_archived %}{% else %}archived=1{% endif %}">{% if show_archived %}جاب‌های فعال{% else %}بایگانی‌ها{% endif %}</a></div></div>
+  <div class="table-responsive"><table class="table align-middle modern-table" data-table-tools><thead><tr><th>اولویت</th><th>هدف</th><th>انتخاب‌ها</th><th>زیرکار جاری</th><th>درصد پیشرفت</th><th>وضعیت</th><th>زمان تهران</th><th></th></tr></thead><tbody>{% for job in jobs %}<tr>
+    <td><span class="priority-badge">{{ job.priority }}</span></td>
+    <td><a class="fw-bold text-decoration-none" href="{% url 'radar:instagram_profile' job.target %}">@{{ job.target }}</a><small class="d-block text-muted">{% if job.account_pool %}Pool: {{ job.account_pool.name }} · تا {{ job.max_active_accounts }} حساب{% else %}با @{{ job.account.username }}{% endif %}</small></td>
+    <td><div class="mini-tags">{% for task in job.subtasks %}<span>{{ task.label }}</span>{% endfor %}</div></td>
+    <td>{{ job.current_stage_fa }}</td>
+    <td><div class="table-progress"><b>{{ job.progress_percent }}٪</b><div class="progress"><div class="progress-bar" style="width:{{ job.progress_percent }}%"></div></div></div></td>
+    <td><span class="badge status-{{ job.status }}">{{ job.get_status_display }}</span></td><td>{{ job.created_at|jalali_datetime }}</td>
+    <td><a class="btn btn-sm btn-light rounded-pill" href="{% url 'radar:observation_detail' job.pk %}">مدیریت</a></td>
+  </tr>{% empty %}<tr><td colspan="8" class="empty">هنوز جاب جامعی ثبت نشده است.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}

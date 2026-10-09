@@ -1,0 +1,12 @@
+Django>=5.2,<5.3
+gunicorn>=23,<24
+psycopg[binary]>=3.2,<4
+celery[redis]>=5.5,<6
+redis>=5,<7
+cryptography>=44,<47
+playwright>=1.55,<2
+aiograpi==2.0.5
+socksio>=1.0,<2
+gallery-dl>=1.30,<2
+Pillow>=11,<13
+Telethon>=1.41,<2

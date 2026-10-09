@@ -1,0 +1,142 @@
+{% extends 'base.html' %}{% block title %}گراف‌سازی · InstaRadar{% endblock %}{% block crumb %}عملیات / گراف‌سازی{% endblock %}{% block body %}
+<div class="intro graph-intro"><div><span class="eyebrow">STAGE 05 / SOCIAL GRAPH</span><h1>گراف‌ساز سه‌سطحی</h1><p>مسیر واقعی ارتباط از پیج هسته تا Followers، Following، مخاطبان متقابل و کامنت‌گذاران.</p></div><div class="graph-health"><span class="dot"></span> محاسبه مستقیم از PostgreSQL</div></div>
+
+<section class="card graph-control-card">
+  {% if seeds %}
+  <form method="post" action="{% url 'radar:save_graph_workspace' %}" id="graph-controls" data-endpoint="{% url 'radar:graph_data' %}" data-export-base="{% url 'radar:graph_export' 'FORMAT' %}">
+    {% csrf_token %}<input type="hidden" name="workspace_id" value="{% if workspace %}{{ workspace.pk }}{% endif %}">
+    <div class="graph-form-grid">
+      <label>نام تنظیمات<input name="name" value="{% if workspace %}{{ workspace.name }}{% endif %}" maxlength="120" placeholder="مثلاً شبکه مشتریان فعال"></label>
+      <label>پیج هسته<select name="seed" required>{% for seed in seeds %}<option value="{{ seed.pk }}" {% if workspace and workspace.seed_id == seed.pk %}selected{% endif %}>@{{ seed.current_username }}{% if seed.full_name %} — {{ seed.full_name }}{% endif %}</option>{% endfor %}</select></label>
+      <label>عمق پیمایش<select name="depth"><option value="1" {% if not workspace or workspace.depth == 1 %}selected{% endif %}>سطح ۱ · ارتباط مستقیم</option><option value="2" {% if workspace.depth == 2 %}selected{% endif %}>سطح ۲ · ارتباط مخاطبان</option><option value="3" {% if workspace.depth == 3 %}selected{% endif %}>سطح ۳ · شبکه توسعه‌یافته</option></select></label>
+      <label>سقف نمایش Node<input name="limit" type="number" min="25" max="2000" step="25" value="{% if workspace %}{{ workspace.node_limit }}{% else %}150{% endif %}"></label>
+    </div>
+    <div class="graph-checks">
+      <label><input type="checkbox" name="followers" {% if not workspace or workspace.include_followers %}checked{% endif %}><span class="legend-dot follower"></span>Follower</label>
+      <label><input type="checkbox" name="following" {% if not workspace or workspace.include_following %}checked{% endif %}><span class="legend-dot following"></span>Following</label>
+      <label><input type="checkbox" name="mutual" {% if not workspace or workspace.include_mutual %}checked{% endif %}><span class="legend-dot mutual"></span>دنبال‌کردن متقابل</label>
+      <label><input type="checkbox" name="comments" {% if not workspace or workspace.include_comments %}checked{% endif %}><span class="legend-dot commenter"></span>کامنت‌گذار</label>
+    </div>
+    <div class="graph-actions"><button type="button" class="button primary" id="render-graph">نمایش گراف</button><button type="submit" class="button ghost">ذخیره تنظیمات</button><a class="button ghost graph-export" data-format="json" href="#">JSON</a><a class="button ghost graph-export" data-format="csv" href="#">CSV</a><a class="button ghost graph-export" data-format="graphml" href="#">GraphML</a></div>
+  </form>
+  {% else %}<div class="graph-empty"><strong>داده‌ای برای ساخت گراف وجود ندارد.</strong><p>ابتدا در «رصد روابط» یک پیج را رصد کنید یا کامنت‌های پست‌های آن را جمع‌آوری کنید.</p><a class="button primary" href="{% url 'radar:relationship_jobs' %}">شروع رصد روابط</a></div>{% endif %}
+</section>
+
+{% if seeds %}
+<div class="graph-stats" id="graph-stats"><div><small>Node</small><strong>—</strong></div><div><small>Edge</small><strong>—</strong></div><div><small>Community</small><strong>—</strong></div><div><small>تراکم</small><strong>—</strong></div></div>
+<div class="graph-layout">
+  <section class="card graph-stage-card">
+    <div class="graph-toolbar"><label>جستجوی Username<input id="graph-search" placeholder="@username" autocomplete="off"></label><div><button type="button" class="graph-tool" id="zoom-in" title="بزرگ‌نمایی">＋</button><button type="button" class="graph-tool" id="zoom-out" title="کوچک‌نمایی">−</button><button type="button" class="graph-tool" id="zoom-reset" title="بازنشانی">⌂</button></div></div>
+    <div class="graph-message" id="graph-message">در حال آماده‌سازی گراف…</div>
+    <div class="graph-canvas"><svg id="social-graph" viewBox="-650 -500 1300 1000" role="img" aria-label="گراف روابط اینستاگرام"><defs><marker id="graph-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z"></path></marker></defs><g id="edge-layer"></g><g id="node-layer"></g></svg></div>
+    <div class="graph-bottom"><div class="depth-legend"><span><i class="depth0"></i>هسته</span><span><i class="depth1"></i>سطح ۱</span><span><i class="depth2"></i>سطح ۲</span><span><i class="depth3"></i>سطح ۳</span></div><button type="button" class="button ghost" id="load-more" hidden>Nodeهای بیشتر</button></div>
+  </section>
+  <aside class="graph-side">
+    <section class="card node-inspector"><div class="section-head"><div><h2>جزئیات مخاطب</h2><p>برای بررسی روی Node بزنید.</p></div></div><div id="node-inspector" class="empty-mini">مخاطبی انتخاب نشده است.</div></section>
+    <section class="card"><div class="section-head"><div><h2>افراد اثرگذار</h2><p>رتبه براساس وزن و اتصال.</p></div></div><ol class="influencers" id="influencers"><li class="empty-mini">پس از رسم گراف نمایش داده می‌شود.</li></ol></section>
+  </aside>
+</div>
+{% endif %}
+
+<section class="card saved-graphs"><div class="section-head"><div><h2>گراف‌های ذخیره‌شده</h2><p>تنظیمات ذخیره می‌شود؛ خود داده همیشه از آخرین Snapshot ساخته خواهد شد.</p></div></div><div class="saved-grid">{% for item in workspaces %}<article><div><strong>{{ item.name }}</strong><small>@{{ item.seed.current_username }} · سطح {{ item.depth }} · {{ item.node_limit }} Node</small></div><div class="actions"><a class="button small" href="{% url 'radar:graph_builder' %}?workspace={{ item.pk }}">باز کردن</a><form method="post" action="{% url 'radar:delete_graph_workspace' item.pk %}" onsubmit="return confirm('تنظیمات این گراف حذف شود؟')">{% csrf_token %}<button class="button small danger" type="submit">حذف</button></form></div></article>{% empty %}<p class="empty-mini">هنوز تنظیمات گرافی ذخیره نشده است.</p>{% endfor %}</div></section>
+
+{% if seeds %}<script>
+(() => {
+  const ns = 'http://www.w3.org/2000/svg';
+  const form = document.getElementById('graph-controls');
+  const svg = document.getElementById('social-graph');
+  const edgesLayer = document.getElementById('edge-layer');
+  const nodesLayer = document.getElementById('node-layer');
+  const message = document.getElementById('graph-message');
+  const more = document.getElementById('load-more');
+  const search = document.getElementById('graph-search');
+  let graph = null;
+  let scale = 1;
+
+  function params() {
+    const data = new URLSearchParams();
+    ['seed', 'depth', 'limit'].forEach(name => data.set(name, form.elements[name].value));
+    ['followers', 'following', 'mutual', 'comments'].forEach(name => data.set(name, form.elements[name].checked ? '1' : '0'));
+    return data;
+  }
+  function updateExports(query) {
+    document.querySelectorAll('.graph-export').forEach(link => {
+      link.href = form.dataset.exportBase.replace('FORMAT', link.dataset.format) + '?' + query;
+    });
+  }
+  function polarLayout(nodes) {
+    const result = new Map();
+    const grouped = new Map();
+    nodes.forEach(node => { if (!grouped.has(node.depth)) grouped.set(node.depth, []); grouped.get(node.depth).push(node); });
+    result.set(graph.seed, {x: 0, y: 0});
+    [1, 2, 3].forEach(depth => {
+      const ring = grouped.get(depth) || [];
+      ring.sort((a, b) => a.community - b.community || b.influence - a.influence || a.username.localeCompare(b.username));
+      const radius = [0, 165, 310, 450][depth];
+      ring.forEach((node, index) => {
+        const angle = (2 * Math.PI * index / Math.max(1, ring.length)) - Math.PI / 2;
+        result.set(node.id, {x: Math.cos(angle) * radius, y: Math.sin(angle) * radius});
+      });
+    });
+    return result;
+  }
+  function svgElement(name, attrs = {}) {
+    const item = document.createElementNS(ns, name);
+    Object.entries(attrs).forEach(([key, value]) => item.setAttribute(key, value));
+    return item;
+  }
+  function html(value) {
+    const box = document.createElement('div');
+    box.textContent = String(value ?? '');
+    return box.innerHTML;
+  }
+  function showNode(node) {
+    const path = node.path.length ? node.path.map(name => '@' + name).join(' ← ') : '—';
+    document.getElementById('node-inspector').innerHTML = `<div class="inspector-avatar">${html((node.username[0] || '?').toUpperCase())}</div><h3 dir="ltr">@${html(node.username)}</h3><p>${html(node.full_name || 'بدون نام ثبت‌شده')}</p><dl><dt>سطح</dt><dd>${node.depth}</dd><dt>جامعه</dt><dd>${node.community || 'هسته'}</dd><dt>امتیاز اثرگذاری</dt><dd>${node.influence}</dd><dt>همسایه مشترک</dt><dd>${node.shared_neighbors}</dd></dl><small>مسیر تا هسته</small><div class="node-path" dir="ltr">${html(path)}</div><a class="button small" target="_blank" rel="noopener" href="https://www.instagram.com/${encodeURIComponent(node.username)}/">نمایش در Instagram</a>`;
+  }
+  function render(payload) {
+    graph = payload; edgesLayer.replaceChildren(); nodesLayer.replaceChildren();
+    const points = polarLayout(payload.nodes);
+    payload.edges.forEach(edge => {
+      const a = points.get(edge.source), b = points.get(edge.target); if (!a || !b) return;
+      const line = svgElement('line', {x1:a.x, y1:a.y, x2:b.x, y2:b.y, class:`graph-edge edge-${edge.type}`, 'stroke-width':Math.min(7, 1 + Math.log2(edge.weight + 1))});
+      if (edge.directed) line.setAttribute('marker-end', 'url(#graph-arrow)');
+      line.dataset.source = edge.source; line.dataset.target = edge.target; edgesLayer.appendChild(line);
+      const title = svgElement('title'); title.textContent = `${edge.label} · وزن ${edge.weight}`; line.appendChild(title);
+    });
+    payload.nodes.forEach(node => {
+      const point = points.get(node.id); const group = svgElement('g', {class:`graph-node depth-${node.depth}`, transform:`translate(${point.x} ${point.y})`, tabindex:'0'});
+      group.dataset.id = node.id; group.dataset.username = node.username.toLowerCase();
+      const circle = svgElement('circle', {r:node.depth === 0 ? 29 : Math.min(25, 14 + node.influence / 18)});
+      const label = svgElement('text', {y:node.depth === 0 ? 47 : 38, 'text-anchor':'middle', direction:'ltr'}); label.textContent = '@' + node.username;
+      const initial = svgElement('text', {y:5, 'text-anchor':'middle', class:'node-initial'}); initial.textContent = (node.username[0] || '?').toUpperCase();
+      group.append(circle, initial, label); group.addEventListener('click', () => showNode(node)); group.addEventListener('keydown', event => { if (event.key === 'Enter') showNode(node); }); nodesLayer.appendChild(group);
+    });
+    const stats = payload.stats; const values = [stats.nodes, stats.edges, stats.communities, stats.density + '٪'];
+    document.querySelectorAll('#graph-stats strong').forEach((item, index) => item.textContent = values[index]);
+    const list = document.getElementById('influencers'); list.replaceChildren();
+    payload.influencers.forEach(node => { const li = document.createElement('li'); li.innerHTML = `<button type="button" dir="ltr">@${html(node.username)}</button><span>${node.influence}</span>`; li.querySelector('button').addEventListener('click', () => showNode(node)); list.appendChild(li); });
+    if (!payload.influencers.length) list.innerHTML = '<li class="empty-mini">مخاطب کافی برای رتبه‌بندی وجود ندارد.</li>';
+    more.hidden = !stats.truncated || Number(form.elements.limit.value) >= 2000;
+    more.dataset.next = stats.next_limit;
+    message.className = 'graph-message ' + (stats.truncated ? 'warning' : 'success');
+    message.textContent = stats.truncated ? `برای پایداری مرورگر، نمایش در ${stats.nodes} Node محدود شده است.` : `گراف با ${stats.nodes} Node و ${stats.edges} ارتباط آماده است.`;
+    search.dispatchEvent(new Event('input'));
+  }
+  async function loadGraph() {
+    const query = params().toString(); updateExports(query); message.className = 'graph-message loading'; message.textContent = 'در حال محاسبه از Snapshotهای PostgreSQL…';
+    try { const response = await fetch(form.dataset.endpoint + '?' + query, {headers:{'Accept':'application/json'}}); const payload = await response.json(); if (!response.ok) throw new Error(payload.error || 'خطای نامشخص'); render(payload); }
+    catch (error) { message.className = 'graph-message error'; message.textContent = 'ساخت گراف ناموفق بود: ' + error.message; }
+  }
+  document.getElementById('render-graph').addEventListener('click', loadGraph);
+  form.querySelectorAll('select,input[type=checkbox],input[name=limit]').forEach(control => control.addEventListener('change', update => updateExports(params().toString())));
+  more.addEventListener('click', () => { form.elements.limit.value = more.dataset.next; loadGraph(); });
+  search.addEventListener('input', () => { const query = search.value.trim().toLowerCase().replace(/^@/, ''); document.querySelectorAll('.graph-node').forEach(node => node.classList.toggle('dimmed', query && !node.dataset.username.includes(query))); });
+  function applyZoom(value) { scale = Math.min(2.5, Math.max(.55, value)); const w = 1300 / scale, h = 1000 / scale; svg.setAttribute('viewBox', `${-w/2} ${-h/2} ${w} ${h}`); }
+  document.getElementById('zoom-in').addEventListener('click', () => applyZoom(scale * 1.2));
+  document.getElementById('zoom-out').addEventListener('click', () => applyZoom(scale / 1.2));
+  document.getElementById('zoom-reset').addEventListener('click', () => applyZoom(1));
+  loadGraph();
+})();
+</script>{% endif %}
+{% endblock %}

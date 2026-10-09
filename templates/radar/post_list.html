@@ -1,0 +1,33 @@
+{% extends 'base.html' %}{% load persian %}
+{% block title %}پست‌ها و ریلزها · InstaRadar{% endblock %}{% block crumb %}محتوا / پست‌ها و ریلزها{% endblock %}
+{% block body %}
+<div class="compact-intro"><div><span class="eyebrow">MEDIA ARCHIVE</span><h1>پست‌ها و ریلزها</h1><p>جستجو، فیلتر چندپیجی، مرتب‌سازی و خروجی کامل Excel.</p></div><div class="d-flex gap-2"><a class="btn btn-success rounded-pill" href="{% url 'radar:export_posts_xlsx' %}?{{ request.GET.urlencode }}"><i class="fa-solid fa-file-excel ms-1"></i>Excel همه نتایج</a><a class="btn btn-primary rounded-pill" href="{% url 'radar:observe' %}">رصد تازه</a></div></div>
+
+<section class="card compact-card mb-3"><form method="get" class="row g-2 align-items-end">
+  <div class="col-xl-4 col-lg-6"><label class="form-label">جستجو در کپشن، هشتگ، منشن، پیج یا Shortcode</label><input class="form-control" name="q" value="{{ query }}" placeholder="مثلاً آموزش، #تهران یا @username"></div>
+  <div class="col-xl-3 col-lg-6"><label class="form-label">یک یا چند پیج</label><select class="form-select multi-filter" name="profiles" multiple size="3">{% for item in profiles %}<option value="{{ item }}" {% if item in selected_profiles %}selected{% endif %}>@{{ item }}</option>{% endfor %}</select></div>
+  <div class="col-xl-2 col-md-4"><label class="form-label">نوع محتوا</label><select class="form-select" name="kind"><option value="all" {% if kind == 'all' %}selected{% endif %}>همه</option><option value="posts" {% if kind == 'posts' %}selected{% endif %}>فقط پست</option><option value="reels" {% if kind == 'reels' %}selected{% endif %}>فقط ریلز</option></select></div>
+  <div class="col-xl-1 col-md-4"><label class="form-label">در صفحه</label><select class="form-select" name="page_size"><option value="20" {% if page_size == 20 %}selected{% endif %}>۲۰</option><option value="40" {% if page_size == 40 %}selected{% endif %}>۴۰</option><option value="80" {% if page_size == 80 %}selected{% endif %}>۸۰</option><option value="120" {% if page_size == 120 %}selected{% endif %}>۱۲۰</option></select></div>
+  <div class="col-xl-2 col-md-4"><label class="form-label">مرتب‌سازی</label><div class="input-group"><select class="form-select" name="sort"><option value="published_at" {% if sort == 'published_at' %}selected{% endif %}>زمان انتشار</option><option value="page" {% if sort == 'page' %}selected{% endif %}>نام پیج</option><option value="likes" {% if sort == 'likes' %}selected{% endif %}>پسند</option><option value="views" {% if sort == 'views' %}selected{% endif %}>بازدید</option><option value="comments" {% if sort == 'comments' %}selected{% endif %}>کامنت</option></select><select class="form-select" name="dir"><option value="desc" {% if direction == 'desc' %}selected{% endif %}>نزولی</option><option value="asc" {% if direction == 'asc' %}selected{% endif %}>صعودی</option></select></div></div>
+  <div class="col-md-3"><label class="form-label">از تاریخ شمسی</label><input class="form-control jalali-picker" name="date_from" value="{{ date_from }}" data-jdp autocomplete="off"></div>
+  <div class="col-md-3"><label class="form-label">تا تاریخ شمسی</label><input class="form-control jalali-picker" name="date_to" value="{{ date_to }}" data-jdp autocomplete="off"></div>
+  <div class="col-md-3"><label class="form-label">پسند از / تا</label><div class="input-group"><input class="form-control" type="number" min="0" name="min_likes" value="{{ min_likes }}" placeholder="از"><input class="form-control" type="number" min="0" name="max_likes" value="{{ max_likes }}" placeholder="تا"></div></div>
+  <div class="col-md-3"><label class="form-label">بازدید از / تا</label><div class="input-group"><input class="form-control" type="number" min="0" name="min_views" value="{{ min_views }}" placeholder="از"><input class="form-control" type="number" min="0" name="max_views" value="{{ max_views }}" placeholder="تا"></div></div>
+  <div class="col-12 d-flex justify-content-end gap-2"><a class="btn btn-light" href="{% url 'radar:post_list' %}">پاک‌کردن</a><button class="btn btn-primary px-4"><i class="fa-solid fa-filter ms-1"></i>اعمال فیلتر</button></div>
+</form></section>
+
+<section class="card compact-card"><div class="table-responsive"><table class="table align-middle modern-table" data-server-table><thead><tr>
+  <th><a href="?{% sort_query 'page' %}">پیج <i class="fa-solid fa-sort"></i></a></th>
+  <th><a href="?{% sort_query 'caption' %}">کپشن / محتوا <i class="fa-solid fa-sort"></i></a></th>
+  <th><a href="?{% sort_query 'kind' %}">نوع <i class="fa-solid fa-sort"></i></a></th>
+  <th><a href="?{% sort_query 'published_at' %}">زمان انتشار <i class="fa-solid fa-sort"></i></a></th>
+  <th><a href="?{% sort_query 'likes' %}">پسند <i class="fa-solid fa-sort"></i></a></th>
+  <th><a href="?{% sort_query 'views' %}">بازدید <i class="fa-solid fa-sort"></i></a></th>
+  <th><a href="?{% sort_query 'comments' %}">کامنت <i class="fa-solid fa-sort"></i></a></th><th>وضعیت</th>
+</tr></thead><tbody>{% for post in page %}<tr>
+  <td><a href="{% url 'radar:instagram_profile' post.owner_username %}">@{{ post.owner_username }}</a></td>
+  <td class="post-caption-cell"><a class="fw-bold" href="{% url 'radar:post_detail' post.pk %}">{{ post.shortcode }}</a><p>{{ post.caption|truncatechars:180|default:'بدون کپشن' }}</p><div class="mini-tags">{% for tag in post.hashtags.all|slice:':5' %}<span>#{{ tag.tag }}</span>{% endfor %}{% for mention in post.mentions.all|slice:':3' %}<span>@{{ mention.username }}</span>{% endfor %}</div></td>
+  <td>{% if post.is_reel %}<span class="badge info"><i class="fa-solid fa-film ms-1"></i>ریلز</span>{% else %}<span class="badge"><i class="fa-regular fa-image ms-1"></i>پست</span>{% endif %}</td>
+  <td>{{ post.published_at|jalali_datetime|default:'—' }}</td><td>{{ post.like_count|default_if_none:'—' }}</td><td>{{ post.display_view_count|default_if_none:'—' }}</td><td>{{ post.comment_count|default_if_none:'—' }}</td><td>{{ post.detail_status }}</td>
+</tr>{% empty %}<tr><td colspan="8" class="empty">محتوایی مطابق این فیلتر پیدا نشد.</td></tr>{% endfor %}</tbody></table></div>{% include 'radar/pagination.html' %}</section>
+{% endblock %}

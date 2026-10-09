@@ -1,0 +1,22 @@
+{% extends 'base.html' %}{% load persian %}
+{% block title %}مدیریت همه جاب‌ها · InstaRadar{% endblock %}{% block crumb %}عملیات / مدیریت جاب‌ها{% endblock %}
+{% block header_actions %}<a class="btn btn-primary btn-sm rounded-pill" href="{% url 'radar:observe' %}"><i class="fa-solid fa-plus ms-1"></i>رصد تازه</a>{% endblock %}
+{% block body %}
+<div class="hero-panel mb-3"><div><span class="eyebrow">UNIFIED JOB CENTER</span><h1>مدیریت همه جاب‌ها</h1><p>ترتیب رصدها و زیرکارها مستقیماً ترتیب اجرای Worker را مشخص می‌کند.</p></div><div class="live-job-count"><strong>{{ active_count }}</strong><span>جاب فعال یا منتظر</span></div></div>
+<section class="card compact-card">
+  <div class="section-head"><div><h2>صف رصدهای جامع</h2><p>کارت را برای اولویت کل جاب و هر زیرکار را برای اولویت داخلی بکشید.</p></div></div>
+  <div class="job-board" data-job-sort-url="{% url 'radar:reorder_jobs' %}">{% for job in observations %}
+    <article class="unified-job-card" draggable="true" data-job-id="{{ job.pk }}">
+      <div class="job-drag" title="جابجایی کل رصد"><i class="fa-solid fa-grip-vertical"></i></div>
+      <div class="job-main">
+        <div class="d-flex align-items-center gap-2 flex-wrap"><a class="job-title" href="{% url 'radar:observation_detail' job.pk %}">@{{ job.target }}</a><span class="badge status-{{ job.status }}">{{ job.get_status_display }}</span><small>حساب @{{ job.account.username }}</small></div>
+        <div class="job-stages" data-stage-sort-url="{% url 'radar:reorder_job_stages' job.pk %}">{% for task in job.subtasks %}<span draggable="true" data-stage="{{ task.key }}" title="{{ task.status_label }}"><i class="fa-solid fa-grip-lines"></i>{{ task.label }} <b>{{ task.counter }}</b></span>{% endfor %}</div>
+        <div class="progress job-progress" role="progressbar" aria-valuenow="{{ job.progress_percent }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:{{ job.progress_percent }}%"><b>{{ job.progress_percent }}٪</b></div></div>
+      </div>
+      <div class="job-meta"><span>اولویت {{ job.priority }}</span><span>جاری: {{ job.current_stage_fa }}</span><time>{{ job.created_at|jalali_datetime }}</time></div>
+    </article>
+  {% empty %}<div class="empty-state">هنوز رصد جامعی ثبت نشده است.</div>{% endfor %}</div>
+</section>
+{% if transfers %}<section class="card compact-card mt-3"><div class="section-head"><div><h2>انتقال‌های مستقل تلگرام</h2><p>پیشرفت بر اساس تعداد آیتم‌های ارسال‌شده یا ناموفق محاسبه می‌شود.</p></div></div><div class="table-responsive"><table class="table modern-table" data-table-tools><thead><tr><th>پیج</th><th>مقصد</th><th>پیشرفت</th><th>درصد</th><th>وضعیت</th><th></th></tr></thead><tbody>{% for job in transfers %}<tr><td>@{{ job.target_username }}</td><td>{{ job.telegram_account.title }}</td><td>{{ job.completed_items }}/{{ job.total_items }}</td><td>{{ job.progress_percent }}٪</td><td>{{ job.get_status_display }}</td><td><a href="{% url 'radar:publish_job_detail' job.pk %}">مدیریت</a></td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+{% if active_count %}<script>window.setTimeout(()=>{if(!document.querySelector('.job-board.dragging,.subtask-row.dragging'))location.reload()},15000);</script>{% endif %}
+{% endblock %}

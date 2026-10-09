@@ -1,0 +1,42 @@
+{% load persian %}
+<section class="card compact-card mt-3" id="job-activity">
+  <div class="section-head mb-0">
+    <div>
+      <h2><i class="fa-solid fa-list-ul text-primary ms-2"></i>رویدادها و لاگ‌های جاب</h2>
+      <p>برای خلوت ماندن صفحه، جزئیات به‌صورت پیش‌فرض بسته است.</p>
+    </div>
+    <button class="btn btn-outline-primary rounded-pill" type="button"
+            data-bs-toggle="collapse" data-bs-target="#jobActivityPanel"
+            aria-expanded="false" aria-controls="jobActivityPanel">
+      <i class="fa-solid fa-chevron-down ms-1"></i> نمایش / مخفی‌سازی
+    </button>
+  </div>
+  <div class="collapse mt-3" id="jobActivityPanel">
+    <h3 class="activity-heading">رویدادهای ساختاریافته</h3>
+    <div class="table-responsive">
+      <table class="table align-middle modern-table" data-table-tools>
+        <thead><tr><th>زمان</th><th>مرحله</th><th>وضعیت</th><th>تعداد</th><th>مدت</th><th>پیام</th></tr></thead>
+        <tbody>{% for row in job_events %}<tr>
+          <td>{% if row.time.isoformat %}{{ row.time|jalali_datetime }}{% else %}{{ row.time|default:'—' }}{% endif %}</td>
+          <td>{{ row.stage|default:'—' }}</td><td>{{ row.status|default:'—' }}</td>
+          <td>{{ row.records|default:0 }}</td><td>{{ row.duration_ms|default:0 }} ms</td>
+          <td class="activity-message">{{ row.message|default:'—' }}</td>
+        </tr>{% empty %}<tr><td colspan="6" class="empty">هنوز رویدادی برای این جاب ثبت نشده است.</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+
+    <h3 class="activity-heading mt-4">لاگ‌های ذخیره‌شده</h3>
+    <div class="saved-log-list">{% for capture in log_captures %}
+      <details class="saved-log">
+        <summary>
+          <span>{{ capture.get_job_kind_display }} · {{ capture.started_at|jalali_datetime }}</span>
+          <span>{{ capture.window_seconds }} ثانیه · {{ capture.get_status_display }} · {{ capture.line_count }} خط</span>
+        </summary>
+        {% if capture.status == 'collecting' %}<div class="alert alert-info mt-2">در حال جمع‌آوری است؛ چند ثانیه دیگر صفحه را تازه کنید.</div>{% endif %}
+        {% if capture.error %}<div class="alert alert-warning mt-2">{{ capture.error }}</div>{% endif %}
+        {% if capture.job_events %}<div class="table-responsive mt-2"><table class="table table-sm modern-table" data-table-tools><thead><tr><th>زمان</th><th>مرحله</th><th>وضعیت</th><th>تعداد</th><th>مدت</th><th>پیام</th></tr></thead><tbody>{% for row in capture.job_events %}<tr><td>{{ row.time }}</td><td>{{ row.stage }}</td><td>{{ row.status|default:'—' }}</td><td>{{ row.records|default:0 }}</td><td>{{ row.duration_ms|default:0 }} ms</td><td>{{ row.message }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+        <pre class="journal mt-2">{{ capture.journal_text|default:'لاگ journal موجود نیست یا هنوز جمع‌آوری نشده است.' }}</pre>
+      </details>
+    {% empty %}<p class="muted">هنوز لاگ ذخیره‌شده‌ای وجود ندارد.</p>{% endfor %}</div>
+  </div>
+</section>

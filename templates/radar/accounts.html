@@ -1,0 +1,64 @@
+{% extends 'base.html' %}{% load persian %}
+{% block title %}حساب‌ها و Poolها · InstaRadar{% endblock %}
+{% block crumb %}اتصال‌ها / Instagram{% endblock %}
+{% block body %}
+<div class="hero-panel mb-3">
+  <div><span class="eyebrow">CONNECTIONS / INSTAGRAM / SAFE POOLS</span><h1>حساب‌های اینستاگرام</h1><p>هر حساب با پروفایل مرورگر مستقل متصل می‌شود؛ Pool فقط کارها را با Lease، بودجه و Cooldown ایمن توزیع می‌کند.</p></div>
+  <div class="priority-flow"><span><b><i class="fa-solid fa-lock"></i></b>یک Lease برای هر حساب</span><span><b><i class="fa-solid fa-shield-halved"></i></b>قرنطینهٔ خودکار</span></div>
+</div>
+
+<section class="card glass-card mb-3">
+  <div class="section-head"><div><h2>افزودن حساب</h2><p>ابتدا حساب را بسازید، سپس Chrome را اجرا و نشست را دریافت کنید.</p></div></div>
+  <form method="post" class="row g-3 align-items-end">{% csrf_token %}
+    <div class="col-md-8"><label class="form-label">نام کاربری اینستاگرام</label><input class="form-control" name="username" placeholder="username" required maxlength="100" dir="ltr"></div>
+    <div class="col-md-4"><button class="btn btn-primary w-100">ثبت حساب</button></div>
+  </form>
+  <details class="mt-3"><summary class="fw-bold">افزودن گروهی نام‌های کاربری</summary><form method="post" class="row g-2 mt-2">{% csrf_token %}<div class="col-md-9"><textarea class="form-control" name="bulk_usernames" rows="3" required placeholder="هر نام کاربری در یک خط؛ حداکثر ۵۰۰ مورد"></textarea><small class="text-muted">این فرم فقط پروفایل‌ها را می‌سازد؛ برای امنیت، ورود و تأیید هر نشست خودکار نمی‌شود.</small></div><div class="col-md-3"><button class="btn btn-outline-primary w-100">ساخت گروهی</button></div></form></details>
+</section>
+
+<section class="card glass-card mb-3">
+  <div class="section-head"><div><h2><i class="fa-solid fa-layer-group text-primary ms-2"></i>Pool حساب‌ها</h2><p>صدها حساب می‌توانند عضو باشند، اما سقف هم‌زمانی سخت سامانه {{ pool_concurrency_cap }} است و همهٔ اعضا یک بودجهٔ سراسری دارند.</p></div></div>
+  <form method="post" action="{% url 'radar:create_account_pool' %}" class="row g-3">{% csrf_token %}
+    <div class="col-lg-3"><label class="form-label">نام Pool</label><input class="form-control" name="name" required maxlength="100" placeholder="مثلاً تیم اصلی"></div>
+    <div class="col-lg-3"><label class="form-label">هم‌زمانی امن</label><input class="form-control" type="number" name="max_concurrency" value="2" min="1" max="{{ pool_concurrency_cap }}" required></div>
+    <div class="col-lg-3"><label class="form-label">سقف کل در ساعت</label><input class="form-control" type="number" name="hourly_request_limit" value="300" min="1" max="{{ pool_hourly_cap }}" required></div>
+    <div class="col-lg-3"><label class="form-label">سقف کل روزانه</label><input class="form-control" type="number" name="daily_request_limit" value="2000" min="1" max="{{ pool_daily_cap }}" required></div>
+    <div class="col-12"><div class="d-flex justify-content-between"><label class="form-label">اعضای اولیه</label><label class="small"><input type="checkbox" data-check-all="#new-pool-members"> انتخاب همه</label></div><div class="choice-grid" id="new-pool-members">
+      {% for account in accounts %}<label class="choice-card"><input type="checkbox" name="account_ids" value="{{ account.pk }}"><i class="fa-brands fa-instagram"></i><b>@{{ account.username }}</b><small>{{ account.health_fa }}</small></label>{% empty %}<p class="text-muted">ابتدا حساب اضافه کنید.</p>{% endfor %}
+    </div></div>
+    <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary rounded-pill px-4" {% if not accounts %}disabled{% endif %}>ساخت Pool</button></div>
+  </form>
+
+  {% for pool in pools %}<div class="border rounded-4 p-3 mt-3">
+    <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><div><h3 class="h5 mb-1">{{ pool.name }}</h3><small class="text-muted">مصرف: {{ pool.requests_this_hour }}/{{ pool.hourly_request_limit }} ساعتی · {{ pool.requests_today }}/{{ pool.daily_request_limit }} روزانه · هم‌زمانی {{ pool.max_concurrency }}</small></div><span class="badge status-done">{{ pool.members.all|length }} عضو</span></div>
+    <form method="post" action="{% url 'radar:update_account_pool' pool.pk %}" class="row g-3">{% csrf_token %}
+      <div class="col-lg-3"><label class="form-label">نام</label><input class="form-control" name="name" value="{{ pool.name }}" maxlength="100" required></div>
+      <div class="col-lg-3"><label class="form-label">هم‌زمانی</label><input class="form-control" type="number" name="max_concurrency" value="{{ pool.max_concurrency }}" min="1" max="{{ pool_concurrency_cap }}" required></div>
+      <div class="col-lg-3"><label class="form-label">سقف ساعتی</label><input class="form-control" type="number" name="hourly_request_limit" value="{{ pool.hourly_request_limit }}" min="1" max="{{ pool_hourly_cap }}" required></div>
+      <div class="col-lg-3"><label class="form-label">سقف روزانه</label><input class="form-control" type="number" name="daily_request_limit" value="{{ pool.daily_request_limit }}" min="1" max="{{ pool_daily_cap }}" required></div>
+      <div class="col-12"><div class="d-flex justify-content-end"><label class="small"><input type="checkbox" data-check-all="#pool-members-{{ pool.pk }}"> انتخاب/لغو همه</label></div><div class="choice-grid" id="pool-members-{{ pool.pk }}">{% for option in pool.account_options %}<label class="choice-card"><input type="checkbox" name="account_ids" value="{{ option.0.pk }}" {% if option.1 %}checked{% endif %}><i class="fa-brands fa-instagram"></i><b>@{{ option.0.username }}</b><small>{{ option.0.health_fa }}</small></label>{% endfor %}</div></div>
+      <div class="col-12 d-flex gap-2 justify-content-end"><button class="btn btn-outline-primary rounded-pill px-4">ذخیره Pool</button></div>
+    </form>
+    <form method="post" action="{% url 'radar:disable_account_pool' pool.pk %}" data-confirm="Pool غیرفعال شود؟ حساب‌ها حذف نمی‌شوند." class="mt-2 text-start">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">غیرفعال‌کردن Pool</button></form>
+  </div>{% empty %}<p class="text-muted mt-3 mb-0">هنوز Pool ساخته نشده است.</p>{% endfor %}
+</section>
+
+<div class="cards">
+  {% for account in accounts %}<article class="card account">
+    <div class="account-top"><div class="avatar">{{ account.username|first|upper }}</div><div><h2>@{{ account.username }}</h2><small>پروفایل مرورگر مجزا • {{ account.created_at|jalali_date }}</small></div><span class="badge {{ account.status_css }}">{{ account.status_fa }}</span></div>
+    <div class="status-help {{ account.status_css }}"><strong>{{ account.status_fa }}</strong><span>{{ account.status_help_fa }}</span></div>
+    <div class="session-grid"><span>Chrome/noVNC: {% if account.browser_captured_at %}<b class="ok">نشست دریافت شد</b>{% else %}در انتظار ورود{% endif %}</span><span>aiograpi: {% if account.verified_at %}<b class="ok">تأیید شده</b>{% else %}در انتظار آزمون{% endif %}</span><span>gallery-dl: {% if account.encrypted_cookies %}<b class="ok">کوکی مشترک آماده</b>{% else %}فاقد نشست{% endif %}</span></div>
+    <div class="border rounded-3 p-3 my-3"><div class="d-flex justify-content-between flex-wrap gap-2"><strong><i class="fa-solid fa-heart-pulse ms-1"></i>{{ account.health_fa }}</strong><span>امتیاز {{ account.health_score }}/100</span></div><small class="text-muted">مصرف {{ account.requests_this_hour }}/{{ account.hourly_request_limit }} ساعتی · {{ account.requests_today }}/{{ account.daily_request_limit }} روزانه{% if account.cooldown_until %} · پایان استراحت {{ account.cooldown_until|jalali_datetime }}{% endif %}</small></div>
+    <form method="post" action="{% url 'radar:update_instagram_account_safety' account.pk %}" class="row g-2 mb-3">{% csrf_token %}
+      <div class="col-4"><label class="form-label small">سقف ساعتی</label><input class="form-control form-control-sm" name="hourly_request_limit" type="number" min="1" max="{{ account_hourly_cap }}" value="{{ account.hourly_request_limit }}"></div>
+      <div class="col-4"><label class="form-label small">سقف روزانه</label><input class="form-control form-control-sm" name="daily_request_limit" type="number" min="1" max="{{ account_daily_cap }}" value="{{ account.daily_request_limit }}"></div>
+      <div class="col-4"><label class="form-label small">فاصله ثانیه</label><input class="form-control form-control-sm" name="min_interval_seconds" type="number" min="{{ account_interval_floor }}" max="3600" value="{{ account.min_interval_seconds }}"></div>
+      <div class="col-12"><button class="btn btn-sm btn-outline-secondary">ذخیره سقف‌های ایمنی</button></div>
+    </form>
+    <p>۱. اجرای مرورگر　۲. ورود و تأیید در noVNC　۳. دریافت نشست　۴. افزودن به Pool</p>
+    <div class="actions"><form method="post" action="{% url 'radar:launch' account.pk %}">{% csrf_token %}<button class="button ghost">اجرای Chrome</button></form><a class="button ghost" href="https://srun.ir/instradar/novnc/vnc.html" target="_blank" rel="noopener">بازکردن noVNC ↗</a><form method="post" action="{% url 'radar:capture' account.pk %}">{% csrf_token %}<button class="button primary">دریافت نشست</button></form><form method="post" action="{% url 'radar:reset_instagram_account_health' account.pk %}">{% csrf_token %}<button class="button ghost">بازنشانی سلامت</button></form><form method="post" action="{% url 'radar:delete_instagram_account' account.pk %}" data-confirm="حساب و نشست Instagram حذف شود؟">{% csrf_token %}<button class="button danger">حذف حساب</button></form></div>
+    {% if account.last_error %}<p class="warning">{{ account.last_error }}</p>{% endif %}
+  </article>{% empty %}<div class="card empty">هنوز حسابی ثبت نشده است.</div>{% endfor %}
+</div>
+<div class="card tip">Pool تضمین نمی‌کند حساب تعلیق نشود. این نسخه فعالیت را محدود و قابل توقف می‌کند؛ هیچ Fingerprint spoofing، تعویض Proxy، دورزدن Challenge یا Login خودکار ندارد.</div>
+{% endblock %}

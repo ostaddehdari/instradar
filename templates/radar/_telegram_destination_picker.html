@@ -1,0 +1,31 @@
+<div class="telegram-destination-panel" data-telegram-picker>
+  <div class="row g-2 align-items-end">
+    <div class="col-lg-5">
+      <label class="form-label fw-bold"><i class="fa-brands fa-telegram text-primary ms-1"></i>حساب تلگرام</label>
+      <select name="telegram_account_id" class="form-select telegram-account-select" required>
+        <option value="">یک حساب را انتخاب کنید</option>
+        {% for telegram in telegram_accounts %}
+          <option value="{{ telegram.pk }}">{{ telegram.title }}{% if telegram.username %} · @{{ telegram.username }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-7"><div class="picker-hint"><i class="fa-solid fa-circle-info"></i> فقط کانال‌ها و گروه‌هایی نمایش داده می‌شوند که حساب انتخابی در آن‌ها مدیر و مجاز به ارسال است.</div></div>
+  </div>
+  <div class="destination-list mt-3">
+    {% for telegram in telegram_accounts %}
+      {% for destination in telegram.destinations.all %}
+        {% if destination.is_active and destination.can_post %}
+          <label class="destination-check is-hidden" data-telegram-account="{{ telegram.pk }}">
+            <input class="form-check-input" type="checkbox" name="telegram_destination_ids" value="{{ destination.pk }}">
+            <span class="destination-icon"><i class="fa-solid {% if destination.kind == 'channel' %}fa-bullhorn{% else %}fa-user-group{% endif %}"></i></span>
+            <span><b>{{ destination.title }}</b><small>{{ telegram.title }} · {{ destination.get_kind_display }}{% if destination.username %} · @{{ destination.username }}{% endif %}</small></span>
+          </label>
+        {% endif %}
+      {% endfor %}
+    {% empty %}
+      <div class="empty py-3">هنوز حساب تلگرام فعالی وجود ندارد.</div>
+    {% endfor %}
+    <div class="destination-empty" data-destination-empty>حساب تلگرام را انتخاب کنید.</div>
+  </div>
+  <div class="mt-2"><a href="{% url 'radar:telegram_accounts' %}" class="small text-decoration-none"><i class="fa-solid fa-rotate ms-1"></i>مدیریت حساب‌ها و تازه‌سازی کانال‌ها</a></div>
+</div>
